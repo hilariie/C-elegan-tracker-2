@@ -1,0 +1,6 @@
+path: D:\Desktop\C-elegan-tracker\data\gry
+train: train
+val: valid
+
+nc: 1
+names: ['worm']
