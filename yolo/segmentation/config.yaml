@@ -1,0 +1,6 @@
+path: D:\Desktop\segmentation\img\
+train: train
+val: valid
+
+
+names: ['worm']
