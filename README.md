@@ -9,7 +9,7 @@ This project aims to detect and track a male C-elegans worm's mating behaviour a
 Ultralytics to detect the worms, use CSRT, BotSORT, and DeepSort algorithms to track the worms, detect when contact 
 between a male and female worm has been made, and records the contact time for scientific research.
 
-# About Me
+# About the Project
 This project compares the performance of different tracking algorithms as mentioned above. In order to use the BotSORT and DeepSORT trackers, a detection algorithm
 was needed. YOLOv8 was used in this study for the detection of worms. Several annotation approaches were used and compared.
 
