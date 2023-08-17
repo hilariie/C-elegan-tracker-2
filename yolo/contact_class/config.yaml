@@ -1,0 +1,9 @@
+path: <absolute_path_to_train_images>
+train: train
+val: valid
+
+nc: 2
+names: ['contact', 'worm']
+
+#nc: 1
+#names: 'worm'
