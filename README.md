@@ -1,6 +1,6 @@
 <div id="header" align="center">
   <h1>
-    Worm tracker with OpenCV
+    C-elegans Tracker
     <img src="results\worm_tracker.jpg" alt="worm tracker screenshot" width="300" align="center"/>
   </h1>
 </div>
