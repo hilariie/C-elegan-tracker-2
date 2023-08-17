@@ -1,0 +1,6 @@
+sam_models
+videos
+ignore
+__pycache__
+
+.idea
