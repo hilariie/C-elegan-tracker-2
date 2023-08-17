@@ -2,7 +2,7 @@
 # E.g., mating1, mating2, mating3, etc.
 video_name: mating1
 
-----------------------------------------------------------------
+# ----------------------------------------------------------------
 # BotSORT tracker
 #To run botsort.py edit here.
 botsort:
@@ -11,7 +11,7 @@ botsort:
 
 # Note adaptive thresholding can't be done with single_class. If single class is True, adaptive_thresholding will automatically be False.
 
----------------------------------------------------------------
+# ---------------------------------------------------------------
 # DeeSORT tracker
 
 # To run `segmentation.py` edit here.
