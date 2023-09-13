@@ -14,7 +14,6 @@ video_path = f'videos/{video_name}.wmv'
 
 # Read video
 cap = cv2.VideoCapture(video_path)
-fps = cap.get(cv2.CAP_PROP_FPS)
 # skip the part where they set up the worms
 setup = ft.video_setup(video_name)
 cap.set(cv2.CAP_PROP_POS_FRAMES, setup)
@@ -26,10 +25,14 @@ objects = {}
 colors = {}
 trajectory = {}
 contacts = []
+male_id = None
+tracker_accuracy = []
+font = cv2.FONT_HERSHEY_SIMPLEX
+line = cv2.LINE_AA
 
 worm_count = 0
 n_init = 10
-worm_check = True
+worm_check = yml['modify']
 image_segmentation = worm_tracker_args['adaptive_thresholding']
 SAM = worm_tracker_args['sam']
 single_class = worm_tracker_args['single_class']
@@ -42,14 +45,14 @@ yolo_model_dir = f'yolo/{yolo_dir1}/runs/detect/coloured_detection/weights/best.
 if image_segmentation:
     output = 'adaptive_thresholding'
     yolo_model_dir = 'yolo/contact_class/runs/detect/gray_detection/weights/best.pt'
-    contact_colour = (255, 0, 0)
+    contact_colour = (0, 0, 255)
     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     worm_threshold = ft.tune_threshold(gray_frame, 101, 12)
 elif SAM:
     output = 'sam'
     sam = sam_model_registry["vit_b"](checkpoint="sam_models/model_b.pth").to(device=0)
     mask_predictor = SamPredictor(sam)
-    contact_colour = (255, 0, 0)
+    contact_colour = (0, 0, 255)
 else:
     output = 'normal'
     contact_colour = 0
@@ -59,8 +62,8 @@ output_path = f"results/{yolo_dir1}/{output}/{video_name}.mp4"
 
 # set output writer
 H, W = frame.shape[:2]
-cap_out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (W, H))
-male_id = None
+cap_out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), 10.5, (W, H))
+
 while ret:
     frame_count = cap.get(cv2.CAP_PROP_POS_FRAMES) - setup
     if image_segmentation:
@@ -96,17 +99,29 @@ while ret:
     for bbox in contact_bboxes:
         cv2.rectangle(frame, (int(bbox[0]) - 5, int(bbox[1]) - 5), (int(bbox[2]) + 5, int(bbox[3]) + 5),
                       contact_colour, 2)
-        cv2.putText(frame, 'CONTACT', (int(bbox[0]) - 5, int(bbox[1]) - 8), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                    contact_colour, 1, cv2.LINE_AA)
+        cv2.putText(frame, 'CONTACT', (int(bbox[0]) - 5, int(bbox[1]) - 8), font, 0.5,
+                    contact_colour, 1, line)
     tracker.update(frame, detections, n_init)
 
     male_id = ft.draw_tracks_and_trajectories(tracker, trajectory, frame, colors, objects, frame_count, results.names,
                                               male_id, track_dist)
+
+    # Calculate and display tracking accuracy
+    if (single_class is True) and (male_id is not None):
+        ft.tracking_accuracy(male_id, tracker.tracks, tracker_accuracy, objects)
+        # Get top right coordinates to display average tracking accuracy
+        acc_x = W - 200
+        acc_y = 60
+        cv2.putText(frame, f'Acc: {round(np.mean(tracker_accuracy), 1)}%', (acc_x, acc_y), font, 1, contact_colour, 2,
+                    line)
+
     if (frame_count > 21) and (single_class is True):
         # Compute euclidean distance between male and female worms
         ft.bbox_contact(trajectory, male_id, objects, frame_count, contacts, frame, contact_colour)
 
-    cv2.imshow('C-elegan worm tracker', frame)
+    # Resize and then display frame and write to output video
+    display_frame = cv2.resize(frame, None, fx=0.7, fy=0.7, interpolation=cv2.INTER_LINEAR)
+    cv2.imshow('C-elegan DeepSORT Tracker', display_frame)
     cap_out.write(frame)
     # Exit if the user presses 'q'
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -116,6 +131,14 @@ while ret:
 cap.release()
 cap_out.release()
 cv2.destroyAllWindows()
+
+male_trajectory = trajectory[male_id]
+# write male trajectory to text file
+male_path = f"results/{yolo_dir1}/{output}/{video_name}_trajectory.txt"
+male_trajectory = ','.join([str(trajectories) for trajectories in male_trajectory]).replace('),', ')\n')
+with open(male_path, "w") as male_out:
+    male_out.write(male_trajectory)
+
 
 # write time of contact to text file
 contact_path = f"results/{yolo_dir1}/{output}/{video_name}.txt"

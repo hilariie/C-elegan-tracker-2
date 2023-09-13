@@ -1,10 +1,13 @@
-# Video name you wish to make inference on
-# E.g., mating1, mating2, mating3, etc.
+# Name of video you want to track
+# E.g., mating1, mating2, mating3, etc. as seen in the 'videos' directory
 video_name: mating1
 
 # ----------------------------------------------------------------
 # BotSORT tracker
+# ---------------------------------------------------------------
+
 #To run botsort.py edit here.
+
 botsort:
  adaptive_thresholding: False # if True, single_class can't be True. See below.
  single_class: True # if True, adaptive_threshold can't be True. See below.
@@ -12,16 +15,37 @@ botsort:
 # Note adaptive thresholding can't be done with single_class. If single class is True, adaptive_thresholding will automatically be False.
 
 # ---------------------------------------------------------------
-# DeeSORT tracker
+# DEEP SORT TRACKER
+# ---------------------------------------------------------------
+
+# If you wish to use the modified DeepSORT version, set to True else, False
+
+modify: True
+
+
+# ---------------------------------------------------------------
+# segmentation.py
+# ---------------------------------------------------------------
 
 # To run `segmentation.py` edit here.
+
 segmentation:
  sam: False
 
-# To run `worm_tracker.py`, edit here.
-worm_tracker:
- adaptive_thresholding: True  # if True, single_class can't be True. See below.
- sam: False
- single_class: False  # if True, adaptive_threshold can't be True. See below.
 
-# Note adaptive thresholding can't be done with single_class. If single class is True, adaptive_thresholding will automatically be False.
+# ---------------------------------------------------------------
+# worm_tracker.py
+# ---------------------------------------------------------------
+
+# To run `worm_tracker.py`, edit here.
+
+worm_tracker:
+ adaptive_thresholding: False  # if True, single_class can't be True. See below.
+ sam: False
+ single_class: True  # if True, adaptive_threshold can't be True. See below.
+
+# ---------------------------------------------------------------
+# NOTE
+# ---------------------------------------------------------------
+
+# Adaptive thresholding can't be done with single_class. If single class is True, adaptive_thresholding will automatically be False.

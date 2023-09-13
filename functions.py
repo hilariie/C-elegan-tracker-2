@@ -295,7 +295,7 @@ def video_setup(vid_name):
         The calculated setup duration in frames.
     """
 
-    vid_dict = {'1': 75, '2': 10, '3': 88, '4': 35, '5': 51, '6': 18, '7': 26}
+    vid_dict = {'1': 11, '2': 10, '3': 88, '4': 35, '5': 51, '6': 18, '7': 26}
 
     # Get the setup duration factor based on the last character of the video name
     setup = vid_dict[vid_name[-1]]
@@ -416,7 +416,8 @@ def sam_segmentation(detections, frame, mask_predictor):
     return frame
 
 
-def draw_tracks_and_trajectories(tracker, trajectory, frame, colours, objects, frame_count, results_dict, male_id, track_dist):
+def draw_tracks_and_trajectories(tracker, trajectory, frame, colours, objects, frame_count, results_dict, male_id,
+                                 track_dist):
     """
     Draw tracks, trajectories, and identify the male worm.
 
@@ -496,3 +497,35 @@ def draw_tracks_and_trajectories(tracker, trajectory, frame, colours, objects, f
                 cv2.line(frame, (int(prev_center[0]), int(prev_center[1])),
                          (int(next_center[0]), int(next_center[1])), colours[track_id], 2)
     return male_id
+
+
+def tracking_accuracy(male_id, tracker, tracker_accuracy, objects):
+    false_detection = 0
+    # If the tracker misses any worm i.e. False Negatives, 
+    # Get the number of missed worms
+    if len(tracker) < 6:
+        false_detection += 6 - len(tracker)
+    
+    # set value for missed male worm detection
+    male_detection = 1.25
+    for track in tracker:
+        # We use try and except clause to cover both DeepSORT and BotSORT usage
+        try:
+            # Get track id if DeepSORT is used
+            track_id = track.track_id
+        except AttributeError:
+            # Get track id if BotSORT is used
+            track_id = track[4]
+        
+        # If male worm is detected, reset the value previously set as 1.25 above to 0
+        # else skip, which means male worm was not detected
+        if objects[track_id] == 'male worm':
+            male_detection = 0
+        # Detect False Positives
+        elif objects[track_id] != 'female worm':
+            false_detection += 1
+    # Calculate for MOTA
+    track_acc = (false_detection + male_detection) / 6
+    track_acc = round((1 - track_acc) * 100)
+    # append MOTA score to list so we can get the average of the MOTA score.
+    tracker_accuracy.append(track_acc)

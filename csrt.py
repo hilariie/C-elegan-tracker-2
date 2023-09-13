@@ -11,7 +11,6 @@ tracker = cv2.legacy.MultiTracker_create()
 video_name = 'mating6'
 
 video = cv2.VideoCapture(f"videos/{video_name}.wmv")
-fps = video.get(cv2.CAP_PROP_FPS)
 setup = video_setup(video_name)
 video.set(cv2.CAP_PROP_POS_FRAMES, setup)
 _, frame = video.read()
@@ -41,7 +40,7 @@ if segmentation:
     frame = convert_frame(gray_frame, worm_threshold)
     frame = np.stack((frame,) * 3, axis=-1)
 
-cap_out = cv2.VideoWriter(f'results/csrt/{output}/{video_name}.mp4', fourcc, fps, (width, height))
+cap_out = cv2.VideoWriter(f'results/csrt/{output}/{video_name}.mp4', fourcc, 10.5, (width, height))
 
 while True:
     # Select worms in the first frame of the video. First worm should be the male worm.
@@ -104,7 +103,7 @@ while True:
                          (int(current_center[0]), int(current_center[1])), bb_colors[j],
                          2)  # Connect the previous center to the current center with a red line
     # Display the resulting frame.
-    cv2.imshow('CSRT Tracker', frame)
+    cv2.imshow('C-elegan CSRT Tracker', frame)
     # Save the frame.
     cap_out.write(frame)
     # Exit if the user presses 'q'

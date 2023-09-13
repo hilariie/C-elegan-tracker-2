@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 from ultralytics import YOLO
 from segment_anything import SamPredictor, sam_model_registry
 import functions as ft
@@ -18,7 +19,6 @@ video_path = f"videos/{video_name}.wmv"
 
 # Load video
 cap = cv2.VideoCapture(video_path)
-fps = cap.get(cv2.CAP_PROP_FPS)
 
 # Skip setup frames
 setup = ft.video_setup(video_name)
@@ -29,6 +29,7 @@ ret, frame = cap.read()
 
 # Initialize variables for tracking
 tracker = ft.Tracker()
+tracker_accuracy = []
 track_dist = {}
 objects = {}
 colors = {}
@@ -37,7 +38,10 @@ contacts = []
 worm_count = 0
 n_init = 10
 SAM = seg_args['sam']
-worm_check = True
+worm_check = yml['modify']
+male_id = None
+font = cv2.FONT_HERSHEY_SIMPLEX
+line = cv2.LINE_AA
 
 # Configure segmentation based on SAM configuration
 if SAM:
@@ -52,7 +56,8 @@ else:
 # Define output video path
 output_path = f"results/segmentation/{output_}/{video_name}.mp4"
 H, W = frame.shape[:2]
-cap_out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), fps, (W, H))
+
+cap_out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), 10.5, (W, H))
 
 # Process frames
 while ret:
@@ -99,17 +104,26 @@ while ret:
         seconds = int(time_elapsed % 60)
         contacts.append(f"{minutes:02d}:{seconds:02d}")
         cv2.rectangle(frame, (min(minx)-20, min(miny)-20), (max(maxx)+20, max(maxy)+20), contact_colour, 3)
-        cv2.putText(frame, 'CONTACT', (min(minx)-20, min(miny)-23), cv2.FONT_HERSHEY_SIMPLEX, 0.5, contact_colour, 1,
-                    cv2.LINE_AA)
+        cv2.putText(frame, 'CONTACT', (min(minx)-20, min(miny)-23), font, 0.5, contact_colour, 1,
+                    line)
 
     # Update tracker
     tracker.update(frame, detections, n_init)
+    male_id = ft.draw_tracks_and_trajectories(tracker, trajectory, frame, colors, objects, frame_count, results.names,
+                                              male_id, track_dist)
 
-    _ = ft.draw_tracks_and_trajectories(tracker, trajectory, frame, colors, objects, frame_count, results.names, None,
-                                        track_dist)
+    # Calculate and display tracking accuracy
+    if male_id:
+        ft.tracking_accuracy(male_id, tracker.tracks, tracker_accuracy, objects)
+        # Get top right coordinates to display average tracking accuracy
+        acc_x = W - 200
+        acc_y = 60
+        cv2.putText(frame, f'Acc: {round(np.mean(tracker_accuracy), 1)}%', (acc_x, acc_y), font, 1, contact_colour, 2,
+                    line)
 
-    # Display the frame and write to output video
-    cv2.imshow('C-elegan Tracker', frame)
+    # Resize and then display frame and write to output video
+    display_frame = cv2.resize(frame, None, fx=0.7, fy=0.7, interpolation=cv2.INTER_LINEAR)
+    cv2.imshow('C-elegan DeepSORT Segmentation Tracker', display_frame)
     cap_out.write(frame)
 
     # Exit if the user presses 'q'
@@ -123,6 +137,12 @@ cap.release()
 cap_out.release()
 cv2.destroyAllWindows()
 
+male_trajectory = trajectory[male_id]
+# write male trajectory to text file
+male_path = f"results/segmentation/{output_}/{video_name}_trajectory.txt"
+male_trajectory = ','.join([str(trajectories) for trajectories in male_trajectory]).replace('),', ')\n')
+with open(male_path, "w") as male_out:
+    male_out.write(male_trajectory)
 
 # write time of contact to text file
 contact_path = f"results/segmentation/{output_}/{video_name}.txt"

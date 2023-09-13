@@ -3,6 +3,7 @@ import numpy as np
 from functions import convert_frame, tune_threshold, video_setup, bbox_contact
 from ultralytics import YOLO
 import yaml
+from functions import tracking_accuracy
 
 with open('config.yaml', 'r') as file:
     yml = yaml.safe_load(file)
@@ -28,12 +29,14 @@ if segmentation:
     output_path = f'results/botsort_tracker/adaptive_thresholding/{video_name}.mp4'
     gray_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     worm_threshold = tune_threshold(gray_frame, 101, 12)
+    acc_colour = 255
 else:
     yolo_model_dir = f'yolo/{dir1}/runs/detect/coloured_detection/weights/best.pt'
     output_path = f'results/botsort_tracker/normal/{dir1}/{video_name}.mp4'
+    acc_colour = 0
 model = YOLO(yolo_model_dir)
 H, W = frame.shape[:2]
-cap_out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), 12, (W, H))
+cap_out = cv2.VideoWriter(output_path, cv2.VideoWriter_fourcc(*'mp4v'), 10.5, (W, H))
 
 id_dict = {}
 track_dist = {}
@@ -42,8 +45,10 @@ height_dict = {}
 objects = {}
 colors = {}
 trajectory = {}
+tracker_accuracy = []
 vid_frames = 0
 contacts = []
+male_id = None
 while ret:
     frame_count = cap.get(cv2.CAP_PROP_POS_FRAMES) - setup
     if segmentation:
@@ -98,13 +103,24 @@ while ret:
             current_center = trajectory[track_id][i]
             cv2.line(frame, (int(prev_center[0]), int(prev_center[1])), (int(current_center[0]), int(current_center[1])), colors[track_id], 2)
 
+    # Calculate and display tracking accuracy
+    if (dir1 == 'single_class') and (male_id is not None):
+        tracking_accuracy(male_id, results.boxes.data.tolist(), tracker_accuracy, objects)
+        # Get top right coordinates to display average tracking accuracy
+        acc_x = W - 200
+        acc_y = 60
+        cv2.putText(frame, f'Acc: {round(np.mean(tracker_accuracy), 1)}%', (acc_x, acc_y), cv2.FONT_HERSHEY_SIMPLEX,
+                    1, acc_colour, 2, cv2.LINE_AA)
+
     if vid_frames <= 21:
         vid_frames += 1
     elif (vid_frames == 22) and (single_class is True):
         # Compute euclidean distance between male and female worms
         bbox_contact(trajectory, male_id, objects, frame_count, contacts, frame, 255)
-    # Display the resulting frame
-    cv2.imshow('C-elegan worm tracker', frame)
+
+    # Resize and then display frame and write to output video
+    display_frame = cv2.resize(frame, None, fx=0.7, fy=0.7, interpolation=cv2.INTER_LINEAR)
+    cv2.imshow('C-elegan BotSORT Tracker', display_frame)
     cap_out.write(frame)
     # Exit if the user presses 'q'
     if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -121,3 +137,12 @@ contacts = sorted(set(contacts))
 contacts = ','.join(contacts).replace(',', '\n')
 with open(contact_path, "w") as contacts_out:
     contacts_out.write(contacts)
+
+male_trajectory = trajectory[male_id]
+print()
+print('END:' male_trajectory)
+# write male trajectory to text file
+male_trajectory_path = output_path[:-4] + '_trajectory.txt' 
+male_trajectory = ','.join([str(trajectories) for trajectories in male_trajectory]).replace('),', ')\n')
+with open(male_path, "w") as male_trajectory_path:
+    male_out.write(male_trajectory)
